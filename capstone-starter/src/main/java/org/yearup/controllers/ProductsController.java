@@ -43,7 +43,6 @@ public class ProductsController
     }
 
     @GetMapping("{id}")
-    @PreAuthorize("permitAll()")
     public Product getById(@PathVariable int id )
     {
         try
