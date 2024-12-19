@@ -7,8 +7,8 @@ import org.yearup.data.ProductDao;
 import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class MySqlProductDao extends MySqlDaoBase implements ProductDao
@@ -158,29 +158,51 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
     @Override
     public void update(int productId, Product product)
     {
-        String sql = "UPDATE products" +
-                " SET name = ? " +
-                "   , price = ? " +
-                "   , category_id = ? " +
-                "   , description = ? " +
-                "   , color = ? " +
-                "   , image_url = ? " +
-                "   , stock = ? " +
-                "   , featured = ? " +
-                " WHERE product_id = ?;";
+        int productNamePos = 0, unitPricePos = 0, categoryIdPos = 0, descriptionPos = 0,
+        colorPos = 0, image_urlPos = 0, stockPos = 0, featuredPos = 0, idPos = 0;
+
+        Map<String, Object> updateParam = new LinkedHashMap<>();
+
+        if(product.getName() != null){
+            updateParam.put("name", product.getName());
+        }
+        if(product.getPrice().compareTo(BigDecimal.ZERO) != 0){
+            updateParam.put("price", product.getPrice());
+        }
+        if(product.getCategoryId() != 0){
+            updateParam.put("category_id", product.getCategoryId());
+        }
+        if(product.getDescription() != null){
+            updateParam.put("description", product.getDescription());
+        }
+        if(product.getColor() != null){
+            updateParam.put("color", product.getColor());
+        }
+        if(product.getImageUrl() != null){
+            updateParam.put("image_url", product.getImageUrl());
+        }
+        if(product.getStock() != 0){
+            updateParam.put("stock", product.getStock());
+        }
+        if(!product.isFeatured()){
+            updateParam.put("featured", product.isFeatured());
+        }
+
+        String updateParamStatement = updateParam.keySet().stream().map(column -> column + " = ?")
+                .collect(Collectors.joining(", "));
+
+        String sql = "UPDATE products SET " + updateParamStatement + "WHERE product_id = ?;";
 
         try (Connection connection = getConnection())
         {
             PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setString(1, product.getName());
-            statement.setBigDecimal(2, product.getPrice());
-            statement.setInt(3, product.getCategoryId());
-            statement.setString(4, product.getDescription());
-            statement.setString(5, product.getColor());
-            statement.setString(6, product.getImageUrl());
-            statement.setInt(7, product.getStock());
-            statement.setBoolean(8, product.isFeatured());
-            statement.setInt(9, productId);
+
+            int index = 1;
+            for(Object value: updateParam.values()){
+                statement.setObject(index++, value);
+            }
+
+            statement.setInt(index, productId);
 
             statement.executeUpdate();
         }
